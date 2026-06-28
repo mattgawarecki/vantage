@@ -7,9 +7,10 @@ interface Props {
   path: string | null
   signals: Signal[]
   activeLine: number | null
+  onJump: (line: number) => void
 }
 
-export function AnnotationsPanel({ path, signals, activeLine }: Props) {
+export function AnnotationsPanel({ path, signals, activeLine, onJump }: Props) {
   if (!path) return <p className="hint">Open a file to see its trail markers.</p>
   if (signals.length === 0) {
     return <p className="hint">No trail markers here — quiet stretch of trail.</p>
@@ -22,14 +23,15 @@ export function AnnotationsPanel({ path, signals, activeLine }: Props) {
           path={path}
           signal={s}
           active={activeLine !== null && s.line === activeLine}
+          onJump={onJump}
         />
       ))}
     </ul>
   )
 }
 
-function AnnotationCard({ path, signal, active }: {
-  path: string; signal: Signal; active: boolean
+function AnnotationCard({ path, signal, active, onJump }: {
+  path: string; signal: Signal; active: boolean; onJump: (line: number) => void
 }) {
   const meta = SIGNAL_META[signal.kind]
   const [prose, setProse] = useState<string | null>(null)
@@ -41,8 +43,13 @@ function AnnotationCard({ path, signal, active }: {
     setLoading(false)
   }
 
+  const jumpable = typeof signal.line === 'number'
   return (
-    <li className={`anno${active ? ' is-active' : ''}`}>
+    <li
+      className={`anno${active ? ' is-active' : ''}${jumpable ? ' is-jumpable' : ''}`}
+      onClick={() => jumpable && onJump(signal.line!)}
+      title={jumpable ? `Jump to line ${signal.line}` : undefined}
+    >
       <div className="anno-head">
         <span className="anno-glyph">{meta.glyph}</span>
         <span className="anno-label">{meta.label}</span>
@@ -52,7 +59,11 @@ function AnnotationCard({ path, signal, active }: {
       {prose ? (
         <p className="anno-prose">{prose}</p>
       ) : (
-        <button className="btn-explain" onClick={onExplain} disabled={loading}>
+        <button
+          className="btn-explain"
+          onClick={(e) => { e.stopPropagation(); onExplain() }}
+          disabled={loading}
+        >
           {loading ? 'Asking guide…' : 'Explain'}
         </button>
       )}

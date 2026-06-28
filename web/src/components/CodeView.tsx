@@ -6,13 +6,15 @@ interface Props {
   content: FileContent | null
   signals: Signal[]
   onPickLine: (line: number) => void
+  /** Scroll target from the annotations panel. `n` bumps so repeat clicks re-fire. */
+  reveal?: { line: number; n: number } | null
 }
 
 // Loosely typed Monaco handles — avoids a hard dep on monaco's types here.
 type EditorHandle = Parameters<OnMount>[0]
 type MonacoHandle = Parameters<OnMount>[1]
 
-export function CodeView({ content, signals, onPickLine }: Props) {
+export function CodeView({ content, signals, onPickLine, reveal }: Props) {
   const editorRef = useRef<EditorHandle | null>(null)
   const monacoRef = useRef<MonacoHandle | null>(null)
   const decoRef = useRef<{ clear: () => void } | null>(null)
@@ -50,6 +52,14 @@ export function CodeView({ content, signals, onPickLine }: Props) {
 
   // Re-apply markers when the file or its signals change.
   useEffect(applyDecorations, [content?.path, signals]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Scroll to a line when the annotations panel requests it.
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor || !reveal) return
+    editor.revealLineInCenter(reveal.line)
+    editor.setPosition({ lineNumber: reveal.line, column: 1 })
+  }, [reveal])
 
   if (!content) {
     return <div className="code-empty">Select a file from the trail.</div>

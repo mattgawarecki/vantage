@@ -2,8 +2,12 @@
 // serves analysis slices, and proxies Claude for explain/ask.
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
+import { execFile } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { join, extname } from 'node:path'
+import { promisify } from 'node:util'
+
+const execFileP = promisify(execFile)
 import { analyze } from '@vantage/analyzer'
 import type { Analysis, FileContent } from '@vantage/shared'
 import { ask, explain, hasKey } from './llm.js'
@@ -35,6 +39,27 @@ app.post('/analyze', async (req, reply) => {
   state.analysis = await analyze(path, { target })
   explainCache.clear()
   return { repoRoot: state.analysis.repoRoot, summary: state.analysis.summary }
+})
+
+// Native folder picker — the server is local, so it can open an OS dialog and
+// return the chosen absolute path (browsers can't expose real FS paths).
+app.post('/pick', async (_req, reply) => {
+  if (process.platform !== 'darwin') {
+    return reply.code(501).send({ error: 'native picker only on macOS; type the path' })
+  }
+  try {
+    const { stdout } = await execFileP('osascript', [
+      '-e',
+      'POSIX path of (choose folder with prompt "Select a TypeScript/React repo")',
+    ])
+    return { path: stdout.trim() }
+  } catch (e) {
+    // osascript exits non-zero on cancel (-128).
+    if (e instanceof Error && /-128|User canceled/.test(e.message)) {
+      return { canceled: true }
+    }
+    return reply.code(500).send({ error: 'picker failed' })
+  }
 })
 
 app.get('/analysis', async (_req, reply) => {

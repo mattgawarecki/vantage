@@ -13,6 +13,7 @@ export default function App() {
   const analysisQ = useQuery({ queryKey: ['analysis'], queryFn: getAnalysis })
   const [selected, setSelected] = useState<string | null>(null)
   const [pickedLine, setPickedLine] = useState<number | null>(null)
+  const [reveal, setReveal] = useState<{ line: number; n: number } | null>(null)
   const [showSummary, setShowSummary] = useState(true)
   const [showEntry, setShowEntry] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -49,6 +50,12 @@ export default function App() {
   function open(path: string) {
     setSelected(path)
     setPickedLine(null)
+    setReveal(null)
+  }
+
+  function jumpToLine(line: number) {
+    setPickedLine(line)
+    setReveal((r) => ({ line, n: (r?.n ?? 0) + 1 }))
   }
 
   if (analysisQ.isLoading) {
@@ -117,6 +124,7 @@ export default function App() {
               content={fileQ.data ?? null}
               signals={signals}
               onPickLine={setPickedLine}
+              reveal={reveal}
             />
           </div>
         </section>
@@ -125,7 +133,7 @@ export default function App() {
           <section className="panel-col">
             <div className="panel-section">
               <h3>Trail markers</h3>
-              <AnnotationsPanel path={selected} signals={signals} activeLine={pickedLine} />
+              <AnnotationsPanel path={selected} signals={signals} activeLine={pickedLine} onJump={jumpToLine} />
             </div>
             <div className="panel-section ask-wrap">
               <AskPanel path={selected} neighborCount={neighborCount} />

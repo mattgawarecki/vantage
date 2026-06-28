@@ -52,6 +52,14 @@ export async function analyzeRepo(path: string, target?: string): Promise<Analyz
   return (await res.json()) as AnalyzeResponse
 }
 
+/** Open a native folder dialog via the local server. null = canceled/unavailable. */
+export async function pickFolder(): Promise<string | null> {
+  const res = await fetch(BASE + '/pick', { method: 'POST' })
+  if (!res.ok) return null
+  const body = (await res.json()) as { path?: string; canceled?: boolean }
+  return body.path ?? null
+}
+
 export async function getFile(path: string): Promise<FileContent> {
   const live = await tryFetch<FileContent>(`/file?path=${encodeURIComponent(path)}`)
   if (live) return live

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { pickFolder } from '../api'
 
 interface Props {
   onSubmit: (path: string, target?: string) => Promise<void>
@@ -10,7 +11,21 @@ export function RepoEntry({ onSubmit, onCancel, serverDown }: Props) {
   const [path, setPath] = useState('')
   const [target, setTarget] = useState('')
   const [busy, setBusy] = useState(false)
+  const [browsing, setBrowsing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  async function browse() {
+    setBrowsing(true)
+    setError(null)
+    try {
+      const picked = await pickFolder()
+      if (picked) setPath(picked)
+    } catch {
+      setError('folder picker unavailable — type the path')
+    } finally {
+      setBrowsing(false)
+    }
+  }
 
   async function go() {
     if (!path.trim()) return
@@ -40,14 +55,24 @@ export function RepoEntry({ onSubmit, onCancel, serverDown }: Props) {
 
         <label className="entry-label">
           Local repo path
-          <input
-            className="entry-input"
-            placeholder="/Users/you/projects/excalidraw"
-            value={path}
-            onChange={(e) => setPath(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && go()}
-            autoFocus
-          />
+          <div className="entry-pathrow">
+            <input
+              className="entry-input"
+              placeholder="/Users/you/projects/excalidraw"
+              value={path}
+              onChange={(e) => setPath(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && go()}
+              autoFocus
+            />
+            <button
+              className="entry-browse"
+              onClick={browse}
+              disabled={browsing || serverDown}
+              title={serverDown ? 'needs the server running' : 'open a folder dialog'}
+            >
+              {browsing ? '…' : 'Browse…'}
+            </button>
+          </div>
         </label>
 
         <label className="entry-label">
