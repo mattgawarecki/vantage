@@ -31,6 +31,9 @@ export interface GraphResult {
 const isFirstParty = (p: string) =>
   !p.includes('node_modules') &&
   !p.startsWith('..') && // outside repo root (e.g. sibling workspace via symlink)
+  !p.endsWith('.d.ts') && // type declarations — not runtime code
+  !/\.(test|spec)\.[tj]sx?$/.test(p) && // test files
+  !/(^|\/)(__tests__|__mocks__)\//.test(p) &&
   /\.(ts|tsx|js|jsx|mts|cts)$/.test(p)
 
 export async function buildGraph(repoRoot: string, target: string): Promise<GraphResult> {
@@ -82,7 +85,7 @@ export async function buildGraph(repoRoot: string, target: string): Promise<Grap
     if (!fileSet.has(e.to)) { fileSet.add(e.to); files.push(e.to) }
   }
 
-  const entrypoints = detectEntrypoints(repoRoot, files, edges)
+  const entrypoints = detectEntrypoints(repoRoot, target, files, edges)
   const depth = bfsDepth(files, edges, entrypoints)
   const cycleCount = countCycles(files, edges)
 
@@ -97,8 +100,32 @@ function findTsConfig(repoRoot: string): string | null {
   return null
 }
 
-/** index.html <script> → main.tsx, then package.json, then orphan roots. */
-function detectEntrypoints(repoRoot: string, files: string[], edges: Edge[]): string[] {
+/** package.json `module`/`main` (+ `exports['.']`) resolved to a known file. */
+function pkgEntry(repoRoot: string, dir: string, has: (rel: string) => boolean): string | null {
+  const pkgPath = join(repoRoot, dir, 'package.json')
+  if (!existsSync(pkgPath)) return null
+  try {
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
+    const exp = pkg.exports?.['.']
+    const candidates = [
+      pkg.module,
+      pkg.main,
+      typeof exp === 'string' ? exp : exp?.import ?? exp?.default,
+    ]
+    for (const c of candidates) {
+      if (!c) continue
+      const rel = join(dir, String(c).replace(/^\.\//, '')).replace(/^\.\//, '')
+      if (has(rel)) return rel
+    }
+  } catch { /* malformed package.json */ }
+  return null
+}
+
+/**
+ * index.html <script> → common src entries → repo package.json → package-local
+ * entry (target index / package.json) → orphan roots (preferring index.*).
+ */
+function detectEntrypoints(repoRoot: string, target: string, files: string[], edges: Edge[]): string[] {
   const found = new Set<string>()
   const has = (rel: string) => files.includes(rel)
 
@@ -115,19 +142,28 @@ function detectEntrypoints(repoRoot: string, files: string[], edges: Edge[]): st
     if (found.size === 0 && has(cand)) found.add(cand)
   }
 
-  // 3. package.json main/module.
-  const pkgPath = join(repoRoot, 'package.json')
-  if (found.size === 0 && existsSync(pkgPath)) {
-    try {
-      const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
-      for (const field of ['module', 'main']) {
-        const rel = pkg[field]?.replace(/^\.\//, '')
-        if (rel && has(rel)) found.add(rel)
-      }
-    } catch { /* ignore malformed package.json */ }
+  // 3. Repo-root package.json main/module.
+  if (found.size === 0) {
+    const e = pkgEntry(repoRoot, '.', has)
+    if (e) found.add(e)
   }
 
-  // 4. Fallback: orphan roots — zero internal fan-in, non-trivial fan-out.
+  // 4. Package-local entry when a subdir is targeted (monorepo package / library):
+  //    <target>/index.* and <target>/package.json main/module/exports.
+  if (found.size === 0 && target && target !== '.') {
+    for (const cand of ['index.tsx', 'index.ts', 'index.jsx', 'index.js']) {
+      const rel = join(target, cand).replace(/^\.\//, '')
+      if (found.size === 0 && has(rel)) found.add(rel)
+    }
+    if (found.size === 0) {
+      const e = pkgEntry(repoRoot, target, has)
+      if (e) found.add(e)
+    }
+  }
+
+  // 5. Fallback: orphan roots (zero internal fan-in, non-trivial fan-out).
+  //    Prefer index.*-named roots — a flat library exposes many unimported
+  //    components, and treating all of them as entrypoints is noise.
   if (found.size === 0) {
     const inDeg = new Map<string, number>()
     const outDeg = new Map<string, number>()
@@ -135,9 +171,11 @@ function detectEntrypoints(repoRoot: string, files: string[], edges: Edge[]): st
       inDeg.set(e.to, (inDeg.get(e.to) ?? 0) + 1)
       outDeg.set(e.from, (outDeg.get(e.from) ?? 0) + 1)
     }
-    for (const f of files) {
-      if ((inDeg.get(f) ?? 0) === 0 && (outDeg.get(f) ?? 0) > 0) found.add(f)
-    }
+    const roots = files.filter(
+      (f) => (inDeg.get(f) ?? 0) === 0 && (outDeg.get(f) ?? 0) > 0,
+    )
+    const indexRoots = roots.filter((f) => /(^|\/)index\.(t|j)sx?$/.test(f))
+    for (const f of indexRoots.length ? indexRoots : roots) found.add(f)
   }
   return [...found]
 }
