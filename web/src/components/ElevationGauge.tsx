@@ -22,7 +22,7 @@ export function ElevationGauge({ analysis, selected, onSelect }: Props) {
 
   return (
     <div className="elevation">
-      <p className="legend">⛰ 0 = entrypoint · higher ▲ = deeper toward leaves</p>
+      <p className="legend">⛰ summit = entrypoint (0) · descend ▼ deeper into the valley</p>
 
       {node ? (
         node.depth === null ? (
@@ -38,7 +38,7 @@ export function ElevationGauge({ analysis, selected, onSelect }: Props) {
                 className={`ramp-step${d === node.depth ? ' is-here' : ''}`}
                 style={{ '--lvl': d / maxDepth } as React.CSSProperties}
               >
-                <span className="ramp-num">▲{d}</span>
+                <span className="ramp-num">{d === 0 ? '⛰0' : `▼${d}`}</span>
                 {d === node.depth && (
                   <span className="ramp-you">you are here · {shortName(node.id)}</span>
                 )}

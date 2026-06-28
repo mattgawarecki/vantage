@@ -16,7 +16,9 @@ export function scoreBand(score: number): 'low' | 'mid' | 'high' {
   return 'low'
 }
 
-/** Depth label; null = off-trail (unreachable). */
+/** Depth label. Entrypoint (0) is the summit; deeper descends. null = off-trail. */
 export function depthLabel(depth: number | null): string {
-  return depth === null ? 'off-trail' : `▲ ${depth}`
+  if (depth === null) return 'off-trail'
+  if (depth === 0) return '⛰ summit'
+  return `▼ ${depth}`
 }
