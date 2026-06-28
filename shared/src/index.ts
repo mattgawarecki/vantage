@@ -11,8 +11,10 @@ export type SignalKind =
 
 export interface Signal {
   kind: SignalKind
-  /** 1-based editor line the marker anchors to, if line-specific. */
+  /** 1-based editor line the marker anchors to (primary, used for the card + jump). */
   line?: number
+  /** All contributing lines to highlight (e.g. every hook in complex-state). Defaults to [line]. */
+  lines?: number[]
   /** Short static description shown on the annotation card. */
   detail: string
   /** 0..1 relative strength, feeds scoring + card emphasis. */

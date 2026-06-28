@@ -26,12 +26,13 @@ export function CodeView({ content, signals, onPickLine, activeLine, reveal }: P
     const monaco = monacoRef.current
     if (!editor || !monaco) return
     decoRef.current?.clear()
-    const lined = signals.filter((s) => typeof s.line === 'number')
-    decoRef.current = editor.createDecorationsCollection(
-      lined.map((s) => {
-        const isActive = s.line === activeLine
+    // Expand each signal to all its contributing lines (e.g. every hook).
+    const decos = signals.flatMap((s) => {
+      const lines = s.lines?.length ? s.lines : s.line ? [s.line] : []
+      return lines.map((line) => {
+        const isActive = line === activeLine
         return {
-          range: new monaco.Range(s.line!, 1, s.line!, 1),
+          range: new monaco.Range(line, 1, line, 1),
           options: {
             isWholeLine: true,
             className: isActive ? 'trail-line trail-line-active' : 'trail-line',
@@ -44,8 +45,9 @@ export function CodeView({ content, signals, onPickLine, activeLine, reveal }: P
             },
           },
         }
-      }),
-    )
+      })
+    })
+    decoRef.current = editor.createDecorationsCollection(decos)
   }
 
   const handleMount: OnMount = (editor, monaco) => {

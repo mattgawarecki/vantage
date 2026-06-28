@@ -64,9 +64,11 @@ export function analyzeFile(
   }
   if (hookHits.length >= 4 || hookHits.some((h) => h.name === 'useReducer')) {
     const counts = tally(hookHits.map((h) => h.name))
+    const lines = [...new Set(hookHits.map((h) => h.line))].sort((a, b) => a - b)
     signals.push({
       kind: 'complex-state',
-      line: hookHits[0].line,
+      line: lines[0],
+      lines,
       detail: `Dense state — ${formatCounts(counts)}`,
       severity: Math.min(1, hookHits.length / 6),
     })
