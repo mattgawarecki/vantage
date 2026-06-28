@@ -24,6 +24,7 @@ export default function App() {
 
   const healthQ = useQuery({ queryKey: ['health'], queryFn: getHealth })
   const hasKey = healthQ.data?.hasKey ?? false
+  const playground = healthQ.data?.playground ?? false
   const keyMut = useMutation({
     mutationFn: setApiKey,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['health'] }),
@@ -73,7 +74,8 @@ export default function App() {
   }
 
   // Entry screen: server up but no repo loaded, or user chose to switch repos.
-  if (status === 'empty' || showEntry) {
+  // Suppressed in playground mode (fixed sample repo).
+  if ((status === 'empty' || showEntry) && !playground) {
     return (
       <RepoEntry
         serverDown={status === 'mock'}
@@ -120,10 +122,20 @@ export default function App() {
           {live ? 'live' : 'sample'}
         </span>
         <div className="topbar-actions">
-          <button onClick={() => setShowKey(true)} title={hasKey ? 'API key set' : 'No API key — Explain/Ask disabled'}>
-            {hasKey ? '🔑' : '🔓'} Key
+          <button
+            className={`key-btn${hasKey ? '' : ' key-unset'}`}
+            onClick={() => setShowKey(true)}
+            title={hasKey ? 'API key set' : 'No API key — Explain/Ask disabled'}
+          >
+            {hasKey ? '🔑 Key set' : '🔓 Set key'}
           </button>
-          <button onClick={() => setShowEntry(true)}>Change repo</button>
+          <button
+            onClick={() => setShowEntry(true)}
+            disabled={playground}
+            title={playground ? 'Playground — fixed sample repo' : 'Analyze a different local repo'}
+          >
+            {playground ? 'Sample repo' : 'Change repo'}
+          </button>
           <button onClick={() => setShowSummary(true)}>Trailhead</button>
           <button onClick={() => setSidebarOpen((v) => !v)}>
             {sidebarOpen ? '⟨ Sidebar' : 'Sidebar ⟩'}
@@ -156,10 +168,22 @@ export default function App() {
           <section className="panel-col">
             <div className="panel-section">
               <h3>Trail markers</h3>
-              <AnnotationsPanel path={selected} signals={signals} activeLine={pickedLine} onJump={jumpToLine} />
+              <AnnotationsPanel
+                path={selected}
+                signals={signals}
+                activeLine={pickedLine}
+                onJump={jumpToLine}
+                hasKey={hasKey}
+                onRequestKey={() => setShowKey(true)}
+              />
             </div>
             <div className="panel-section ask-wrap">
-              <AskPanel path={selected} neighborCount={neighborCount} />
+              <AskPanel
+                path={selected}
+                neighborCount={neighborCount}
+                hasKey={hasKey}
+                onRequestKey={() => setShowKey(true)}
+              />
             </div>
           </section>
         )}

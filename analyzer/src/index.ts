@@ -41,7 +41,11 @@ export async function analyze(repoRoot: string, opts: AnalyzeOptions = {}): Prom
 
   // --- aggregate-dependent signals: high-fan-in (gated) + recency ---
   const mtimes = [...perFile.values()].map((v) => v.mtimeMs).filter((m) => m > 0).sort((a, b) => a - b)
-  const recentCut = mtimes.length ? mtimes[Math.floor(mtimes.length * 0.85)] : Infinity
+  // Skip recency on a degenerate mtime distribution (e.g. fresh git clone stamps
+  // every file the same), otherwise it flags everything.
+  const distinctMtimes = new Set(mtimes).size
+  const recentCut =
+    mtimes.length && distinctMtimes >= 4 ? mtimes[Math.floor(mtimes.length * 0.85)] : Infinity
   const fanVals = [...fanIn.values()].sort((a, b) => a - b)
   const fanCut = Math.max(4, fanVals.length ? fanVals[Math.floor(fanVals.length * 0.8)] : 4)
 
@@ -76,9 +80,14 @@ export async function analyze(repoRoot: string, opts: AnalyzeOptions = {}): Prom
     })
   }
 
-  // Normalize raw scores to 0..1 by percentile rank (outlier-robust).
-  const sorted = [...raw.values()].sort((a, b) => a - b)
-  for (const n of nodes) n.score = percentileRank(sorted, raw.get(n.id)!)
+  // Normalize to 0..1 by percentile rank over files that actually have signal.
+  // Zero-signal files score 0 — otherwise (on a repo that's mostly boilerplate)
+  // the many zeros dominate the rank and push thin files into the "high" band.
+  const positives = [...raw.values()].filter((v) => v > 0).sort((a, b) => a - b)
+  for (const n of nodes) {
+    const r = raw.get(n.id)!
+    n.score = r > 0 ? percentileRank(positives, r) : 0
+  }
 
   const summary = buildSummary(repoRoot, nodes, graph.cycleCount, warnings)
   return { repoRoot, entrypoints: graph.entrypoints, nodes, edges: graph.edges, summary }

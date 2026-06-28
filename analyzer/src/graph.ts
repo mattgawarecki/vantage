@@ -93,11 +93,18 @@ export async function buildGraph(repoRoot: string, target: string): Promise<Grap
 }
 
 function findTsConfig(repoRoot: string): string | null {
-  for (const name of ['tsconfig.json', 'tsconfig.app.json']) {
-    const p = join(repoRoot, name)
-    if (existsSync(p)) return p
+  // Prefer a config that actually declares compilerOptions.paths — in a Vite
+  // scaffold tsconfig.json is a references-only stub and the aliases live in
+  // tsconfig.app.json. Picking the stub mis-resolves aliases and orphans files.
+  const existing = ['tsconfig.app.json', 'tsconfig.json']
+    .map((n) => join(repoRoot, n))
+    .filter(existsSync)
+  for (const p of existing) {
+    try {
+      if (/"paths"\s*:/.test(readFileSync(p, 'utf8'))) return p
+    } catch { /* unreadable */ }
   }
-  return null
+  return existing[0] ?? null
 }
 
 /** package.json `module`/`main` (+ `exports['.']`) resolved to a known file. */
@@ -201,7 +208,10 @@ function bfsDepth(files: string[], edges: Edge[], entrypoints: string[]): Map<st
   return depth
 }
 
-/** Cheap cycle count via DFS back-edge detection (number of back edges). */
+/**
+ * Cheap cycle indicator: count of DFS back edges. Iterative (an explicit stack)
+ * so a deep first-party graph can't overflow the call stack and crash analyze.
+ */
 function countCycles(files: string[], edges: Edge[]): number {
   const adj = new Map<string, string[]>()
   for (const e of edges) {
@@ -210,15 +220,23 @@ function countCycles(files: string[], edges: Edge[]): number {
   }
   const state = new Map<string, 0 | 1 | 2>() // 0 unvisited, 1 in-stack, 2 done
   let back = 0
-  const visit = (n: string) => {
-    state.set(n, 1)
-    for (const m of adj.get(n) ?? []) {
-      const s = state.get(m) ?? 0
-      if (s === 1) back++
-      else if (s === 0) visit(m)
+  for (const start of files) {
+    if ((state.get(start) ?? 0) !== 0) continue
+    const stack: { node: string; i: number }[] = [{ node: start, i: 0 }]
+    state.set(start, 1)
+    while (stack.length) {
+      const frame = stack[stack.length - 1]
+      const neighbors = adj.get(frame.node) ?? []
+      if (frame.i < neighbors.length) {
+        const m = neighbors[frame.i++]
+        const s = state.get(m) ?? 0
+        if (s === 1) back++
+        else if (s === 0) { state.set(m, 1); stack.push({ node: m, i: 0 }) }
+      } else {
+        state.set(frame.node, 2)
+        stack.pop()
+      }
     }
-    state.set(n, 2)
   }
-  for (const f of files) if ((state.get(f) ?? 0) === 0) visit(f)
   return back
 }

@@ -5,9 +5,11 @@ import { Markdown } from './Markdown'
 interface Props {
   path: string | null
   neighborCount: number
+  hasKey: boolean
+  onRequestKey: () => void
 }
 
-export function AskPanel({ path, neighborCount }: Props) {
+export function AskPanel({ path, neighborCount, hasKey, onRequestKey }: Props) {
   const [q, setQ] = useState('')
   const [answer, setAnswer] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -18,6 +20,16 @@ export function AskPanel({ path, neighborCount }: Props) {
     setAnswer(null)
     setAnswer(await ask(path, q.trim()))
     setLoading(false)
+  }
+
+  if (!hasKey) {
+    return (
+      <div className="ask">
+        <h4>Ask the trail guide</h4>
+        <p className="ask-ground">Natural-language Q&amp;A needs a Claude API key.</p>
+        <button className="btn-ask btn-needkey" onClick={onRequestKey}>🔑 Set API key</button>
+      </div>
+    )
   }
 
   return (

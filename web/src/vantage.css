@@ -51,7 +51,18 @@ body { background: var(--bg); color: var(--ink); }
   font-size: 0.8rem;
   cursor: pointer;
 }
-.topbar button:hover { border-color: var(--trail); }
+.topbar button:hover:not(:disabled) { border-color: var(--trail); }
+.topbar button:disabled { opacity: 0.5; cursor: default; }
+
+.key-unset {
+  border-color: var(--trail) !important;
+  color: var(--trail-hi) !important;
+}
+.btn-needkey {
+  border-color: var(--trail);
+  color: var(--trail-hi);
+}
+.btn-needkey:hover { background: var(--panel-2); }
 
 .badge {
   font-size: 0.68rem;

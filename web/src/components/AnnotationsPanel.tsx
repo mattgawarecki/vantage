@@ -9,9 +9,11 @@ interface Props {
   signals: Signal[]
   activeLine: number | null
   onJump: (line: number) => void
+  hasKey: boolean
+  onRequestKey: () => void
 }
 
-export function AnnotationsPanel({ path, signals, activeLine, onJump }: Props) {
+export function AnnotationsPanel({ path, signals, activeLine, onJump, hasKey, onRequestKey }: Props) {
   if (!path) return <p className="hint">Open a file to see its trail markers.</p>
   if (signals.length === 0) {
     return <p className="hint">No trail markers here — quiet stretch of trail.</p>
@@ -25,14 +27,17 @@ export function AnnotationsPanel({ path, signals, activeLine, onJump }: Props) {
           signal={s}
           active={activeLine !== null && s.line === activeLine}
           onJump={onJump}
+          hasKey={hasKey}
+          onRequestKey={onRequestKey}
         />
       ))}
     </ul>
   )
 }
 
-function AnnotationCard({ path, signal, active, onJump }: {
+function AnnotationCard({ path, signal, active, onJump, hasKey, onRequestKey }: {
   path: string; signal: Signal; active: boolean; onJump: (line: number) => void
+  hasKey: boolean; onRequestKey: () => void
 }) {
   const meta = SIGNAL_META[signal.kind]
   const [prose, setProse] = useState<string | null>(null)
@@ -59,13 +64,21 @@ function AnnotationCard({ path, signal, active, onJump }: {
       <p className="anno-detail">{signal.detail}</p>
       {prose ? (
         <div className="anno-prose"><Markdown>{prose}</Markdown></div>
-      ) : (
+      ) : hasKey ? (
         <button
           className="btn-explain"
           onClick={(e) => { e.stopPropagation(); onExplain() }}
           disabled={loading}
         >
           {loading ? 'Asking guide…' : 'Explain'}
+        </button>
+      ) : (
+        <button
+          className="btn-explain btn-needkey"
+          onClick={(e) => { e.stopPropagation(); onRequestKey() }}
+          title="Explain needs a Claude API key"
+        >
+          🔑 Set API key to explain
         </button>
       )}
     </li>

@@ -60,9 +60,10 @@ export async function pickFolder(): Promise<string | null> {
   return body.path ?? null
 }
 
-export async function getHealth(): Promise<{ hasKey: boolean; analyzed: boolean }> {
-  const r = await tryFetch<{ hasKey: boolean; analyzed: boolean }>('/health')
-  return r ?? { hasKey: false, analyzed: false }
+export interface Health { hasKey: boolean; analyzed: boolean; playground: boolean }
+export async function getHealth(): Promise<Health> {
+  const r = await tryFetch<Health>('/health')
+  return r ?? { hasKey: false, analyzed: false, playground: false }
 }
 
 /** Set the Claude API key on the server (in-memory). Throws on failure. */

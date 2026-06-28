@@ -143,7 +143,9 @@ export async function explain(
 
   const res = await c.messages.create({
     model: EXPLAIN_MODEL,
-    max_tokens: 1500,
+    // Adaptive thinking counts against max_tokens — keep headroom so the visible
+    // answer isn't starved (and can't come back empty).
+    max_tokens: 4000,
     thinking: { type: 'adaptive' },
     system,
     messages: [{ role: 'user', content: user }],
