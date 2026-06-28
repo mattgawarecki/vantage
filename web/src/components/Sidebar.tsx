@@ -3,8 +3,9 @@ import type { Analysis } from '@vantage/shared'
 import { FileTree } from './FileTree'
 import { ElevationGauge } from './ElevationGauge'
 import { TrailFeed } from './TrailFeed'
+import { TrailRoute } from './TrailRoute'
 
-type Tab = 'files' | 'elevation' | 'trail'
+type Tab = 'files' | 'elevation' | 'trail' | 'route'
 
 interface Props {
   analysis: Analysis
@@ -15,7 +16,8 @@ interface Props {
 const TABS: { id: Tab; label: string }[] = [
   { id: 'files', label: 'Files' },
   { id: 'elevation', label: 'Elevation' },
-  { id: 'trail', label: 'Trail markers' },
+  { id: 'trail', label: 'Markers' },
+  { id: 'route', label: 'Route' },
 ]
 
 export function Sidebar({ analysis, selected, onSelect }: Props) {
@@ -42,6 +44,9 @@ export function Sidebar({ analysis, selected, onSelect }: Props) {
         )}
         {tab === 'trail' && (
           <TrailFeed nodes={analysis.nodes} selected={selected} onSelect={onSelect} />
+        )}
+        {tab === 'route' && (
+          <TrailRoute analysis={analysis} selected={selected} onSelect={onSelect} />
         )}
       </div>
     </aside>

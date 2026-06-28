@@ -208,6 +208,63 @@ body { background: var(--bg); color: var(--ink); }
 .feed-score { font-family: ui-monospace, monospace; color: var(--trail-hi); font-size: 0.78rem; }
 .feed-marker { font-size: 0.74rem; color: var(--ink-dim); }
 
+/* ---- recommended route ---- */
+.route-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+.route-tab {
+  flex: 1;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--ink-dim);
+  border-radius: 6px;
+  padding: 5px 4px;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.route-tab.is-active { color: #1a1109; background: var(--trail); border-color: var(--trail); font-weight: 600; }
+.route-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.route-stop { display: flex; gap: 10px; position: relative; }
+.route-stop:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 22px;
+  bottom: -2px;
+  border-left: 2px dashed var(--moss);
+  opacity: 0.6;
+}
+.route-num {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--trail);
+  color: #1a1109;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+}
+.route-card {
+  flex: 1;
+  text-align: left;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px 9px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.route-card:hover { border-color: var(--trail); }
+.route-card.is-selected { outline: 1px solid var(--trail); }
+.route-head { display: flex; align-items: center; gap: 6px; }
+.route-name { flex: 1; font-size: 0.84rem; }
+.route-why { font-size: 0.74rem; color: var(--ink-dim); }
+
 /* ---- editor ---- */
 .editor-path {
   padding: 6px 12px;
