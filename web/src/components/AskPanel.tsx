@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ask } from '../api'
+import { Markdown } from './Markdown'
 
 interface Props {
   path: string | null
@@ -37,7 +38,7 @@ export function AskPanel({ path, neighborCount }: Props) {
       <button className="btn-ask" onClick={onAsk} disabled={loading || !path}>
         {loading ? 'Asking…' : 'Ask'}
       </button>
-      {answer && <p className="ask-answer">{answer}</p>}
+      {answer && <div className="ask-answer"><Markdown>{answer}</Markdown></div>}
     </div>
   )
 }

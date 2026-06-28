@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Signal } from '@vantage/shared'
 import { SIGNAL_META } from '../ui'
 import { explain } from '../api'
+import { Markdown } from './Markdown'
 
 interface Props {
   path: string | null
@@ -57,7 +58,7 @@ function AnnotationCard({ path, signal, active, onJump }: {
       </div>
       <p className="anno-detail">{signal.detail}</p>
       {prose ? (
-        <p className="anno-prose">{prose}</p>
+        <div className="anno-prose"><Markdown>{prose}</Markdown></div>
       ) : (
         <button
           className="btn-explain"

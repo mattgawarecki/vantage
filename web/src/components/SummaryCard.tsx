@@ -19,12 +19,18 @@ export function SummaryCard({ summary, repoRoot, live, onDismiss }: Props) {
         </header>
         <p className="summary-root">{repoRoot}</p>
         <div className="summary-grid">
-          <Stat label="Files" value={summary.fileCount} />
-          <Stat label="Framework" value={summary.framework} />
-          <Stat label="Entrypoints" value={summary.entrypoints.join(', ') || '—'} />
-          <Stat label="Orphans" value={summary.orphanCount} hot={summary.orphanCount > 0} />
-          <Stat label="Cycles" value={summary.cycleCount} hot={summary.cycleCount > 0} />
-          <Stat label="Top dirs" value={summary.topDirs.join(', ') || '—'} />
+          <Stat label="Files" value={summary.fileCount}
+            hint="First-party TypeScript/React source files in the analyzed graph (node_modules excluded)." />
+          <Stat label="Framework" value={summary.framework}
+            hint="Detected from package.json dependencies." />
+          <Stat label="Entrypoints" value={summary.entrypoints.join(', ') || '—'}
+            hint="Where the app starts — the summit (depth 0). Depth of every other file is measured from here." />
+          <Stat label="Orphans" value={summary.orphanCount} hot={summary.orphanCount > 0}
+            hint="Files unreachable from any entrypoint (off-trail) — often dead code, tests, or scripts not imported by the app." />
+          <Stat label="Cycles" value={summary.cycleCount} hot={summary.cycleCount > 0}
+            hint="Import cycles (A → B → … → A). Tangled dependencies that are harder to reason about and refactor safely." />
+          <Stat label="Top dirs" value={summary.topDirs.join(', ') || '—'}
+            hint="Directories holding the most source files — the main regions of the map." />
         </div>
         {summary.warnings.length > 0 && (
           <p className="summary-warn">⚠ {summary.warnings.length} parse warning(s) skipped</p>
@@ -35,10 +41,15 @@ export function SummaryCard({ summary, repoRoot, live, onDismiss }: Props) {
   )
 }
 
-function Stat({ label, value, hot }: { label: string; value: string | number; hot?: boolean }) {
+function Stat({ label, value, hot, hint }: {
+  label: string; value: string | number; hot?: boolean; hint?: string
+}) {
   return (
-    <div className={`stat${hot ? ' hot' : ''}`}>
-      <span className="stat-label">{label}</span>
+    <div className={`stat${hot ? ' hot' : ''}`} title={hint}>
+      <span className="stat-label">
+        {label}
+        {hint && <span className="stat-info" aria-hidden> ⓘ</span>}
+      </span>
       <span className="stat-value">{value}</span>
     </div>
   )
