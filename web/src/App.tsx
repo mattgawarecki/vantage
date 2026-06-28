@@ -124,6 +124,7 @@ export default function App() {
               content={fileQ.data ?? null}
               signals={signals}
               onPickLine={setPickedLine}
+              activeLine={pickedLine}
               reveal={reveal}
             />
           </div>

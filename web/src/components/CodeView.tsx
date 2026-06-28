@@ -6,6 +6,8 @@ interface Props {
   content: FileContent | null
   signals: Signal[]
   onPickLine: (line: number) => void
+  /** The currently-focused marker line, emphasized more strongly. */
+  activeLine?: number | null
   /** Scroll target from the annotations panel. `n` bumps so repeat clicks re-fire. */
   reveal?: { line: number; n: number } | null
 }
@@ -14,7 +16,7 @@ interface Props {
 type EditorHandle = Parameters<OnMount>[0]
 type MonacoHandle = Parameters<OnMount>[1]
 
-export function CodeView({ content, signals, onPickLine, reveal }: Props) {
+export function CodeView({ content, signals, onPickLine, activeLine, reveal }: Props) {
   const editorRef = useRef<EditorHandle | null>(null)
   const monacoRef = useRef<MonacoHandle | null>(null)
   const decoRef = useRef<{ clear: () => void } | null>(null)
@@ -26,15 +28,23 @@ export function CodeView({ content, signals, onPickLine, reveal }: Props) {
     decoRef.current?.clear()
     const lined = signals.filter((s) => typeof s.line === 'number')
     decoRef.current = editor.createDecorationsCollection(
-      lined.map((s) => ({
-        range: new monaco.Range(s.line!, 1, s.line!, 1),
-        options: {
-          isWholeLine: true,
-          glyphMarginClassName: 'trail-glyph',
-          glyphMarginHoverMessage: { value: `**${s.kind}** — ${s.detail}` },
-          linesDecorationsClassName: 'trail-line',
-        },
-      })),
+      lined.map((s) => {
+        const isActive = s.line === activeLine
+        return {
+          range: new monaco.Range(s.line!, 1, s.line!, 1),
+          options: {
+            isWholeLine: true,
+            className: isActive ? 'trail-line trail-line-active' : 'trail-line',
+            glyphMarginClassName: 'trail-glyph',
+            glyphMarginHoverMessage: { value: `**${s.kind}** — ${s.detail}` },
+            linesDecorationsClassName: 'trail-strip',
+            overviewRuler: {
+              color: isActive ? '#f0a85c' : '#e08a3c',
+              position: monaco.editor.OverviewRulerLane.Right,
+            },
+          },
+        }
+      }),
     )
   }
 
@@ -51,7 +61,7 @@ export function CodeView({ content, signals, onPickLine, reveal }: Props) {
   }
 
   // Re-apply markers when the file or its signals change.
-  useEffect(applyDecorations, [content?.path, signals]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(applyDecorations, [content?.path, signals, activeLine]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to a line when the annotations panel requests it.
   useEffect(() => {

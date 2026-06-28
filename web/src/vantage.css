@@ -208,7 +208,19 @@ body { background: var(--bg); color: var(--ink); }
   font-size: 12px;
   margin-left: 2px;
 }
-.trail-line { background: rgba(224, 138, 60, 0.12); }
+/* whole-line tint for marker lines */
+.trail-line { background: rgba(224, 138, 60, 0.16); }
+/* the focused marker line — clearly stronger */
+.trail-line-active {
+  background: rgba(224, 138, 60, 0.34);
+  box-shadow: inset 2px 0 0 var(--trail-hi);
+}
+/* accent bar in the line-decorations gutter */
+.trail-strip {
+  background: var(--trail);
+  width: 3px !important;
+  margin-left: 3px;
+}
 
 /* ---- annotations ---- */
 .panel-section { padding: 10px 12px; overflow: auto; }
