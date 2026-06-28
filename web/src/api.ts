@@ -15,9 +15,41 @@ async function tryFetch<T>(path: string, init?: RequestInit): Promise<T | null> 
   }
 }
 
-export async function getAnalysis(): Promise<{ data: Analysis; live: boolean }> {
-  const live = await tryFetch<Analysis>('/analysis')
-  return live ? { data: live, live: true } : { data: mockAnalysis, live: false }
+export type AnalysisStatus = 'live' | 'empty' | 'mock'
+export interface AnalysisResult {
+  data: Analysis | null
+  status: AnalysisStatus
+}
+
+/** live = server has an analysis; empty = server up but no repo loaded; mock = server down. */
+export async function getAnalysis(): Promise<AnalysisResult> {
+  try {
+    const res = await fetch(BASE + '/analysis')
+    if (res.ok) return { data: (await res.json()) as Analysis, status: 'live' }
+    if (res.status === 409) return { data: null, status: 'empty' }
+    return { data: mockAnalysis, status: 'mock' }
+  } catch {
+    return { data: mockAnalysis, status: 'mock' }
+  }
+}
+
+export interface AnalyzeResponse {
+  repoRoot: string
+  summary: Analysis['summary']
+}
+
+/** Point the server at a local repo. Throws with a readable message on failure. */
+export async function analyzeRepo(path: string, target?: string): Promise<AnalyzeResponse> {
+  const res = await fetch(BASE + '/analyze', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ path, target: target || undefined }),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string }
+    throw new Error(body.error ?? `analyze failed (${res.status})`)
+  }
+  return (await res.json()) as AnalyzeResponse
 }
 
 export async function getFile(path: string): Promise<FileContent> {
