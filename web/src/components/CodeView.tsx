@@ -1,6 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Editor, { type OnMount } from '@monaco-editor/react'
 import type { FileContent, Signal } from '@vantage/shared'
+
+// Beyond this, auto-loading Monaco (+ decorations) gets janky — guard it.
+const BIG_LINES = 4000
+const BIG_CHARS = 400_000
 
 interface Props {
   content: FileContent | null
@@ -20,6 +24,10 @@ export function CodeView({ content, signals, onPickLine, activeLine, reveal }: P
   const editorRef = useRef<EditorHandle | null>(null)
   const monacoRef = useRef<MonacoHandle | null>(null)
   const decoRef = useRef<{ clear: () => void } | null>(null)
+  const [forceLoad, setForceLoad] = useState(false)
+
+  // Reset the large-file override when switching files.
+  useEffect(() => setForceLoad(false), [content?.path])
 
   function applyDecorations() {
     const editor = editorRef.current
@@ -75,6 +83,21 @@ export function CodeView({ content, signals, onPickLine, activeLine, reveal }: P
 
   if (!content) {
     return <div className="code-empty">Select a file from the trail.</div>
+  }
+
+  const lineCount = content.source.split('\n').length
+  const isBig = lineCount > BIG_LINES || content.source.length > BIG_CHARS
+  if (isBig && !forceLoad) {
+    return (
+      <div className="code-large">
+        <p className="code-large-title">📄 Large file</p>
+        <p className="code-large-info">
+          {lineCount.toLocaleString()} lines · {Math.round(content.source.length / 1024)} KB
+        </p>
+        <p className="hint">Rendering in the editor may be slow. Trail markers still apply once open.</p>
+        <button className="btn-explain" onClick={() => setForceLoad(true)}>Open anyway</button>
+      </div>
+    )
   }
 
   return (

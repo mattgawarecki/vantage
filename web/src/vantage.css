@@ -290,6 +290,18 @@ body { background: var(--bg); color: var(--ink); }
 }
 .editor-wrap { flex: 1; min-height: 0; }
 .code-empty { display: grid; place-items: center; height: 100%; color: var(--ink-dim); }
+.code-large {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  padding: 24px;
+}
+.code-large-title { font-size: 1.1rem; margin: 0; }
+.code-large-info { color: var(--trail-hi); font-family: ui-monospace, monospace; margin: 0; }
 .trail-glyph::before {
   content: "🚩";
   font-size: 12px;
