@@ -10,7 +10,7 @@ import { promisify } from 'node:util'
 const execFileP = promisify(execFile)
 import { analyze } from '@vantage/analyzer'
 import type { Analysis, FileContent } from '@vantage/shared'
-import { ask, explain, hasKey } from './llm.js'
+import { ask, explain, hasKey, setKey } from './llm.js'
 
 // Load server/.env (gitignored) if present — Node 24 built-in, no dotenv dep.
 try {
@@ -31,6 +31,17 @@ const app = Fastify({ logger: true })
 await app.register(cors, { origin: true })
 
 app.get('/health', async () => ({ ok: true, hasKey: hasKey(), analyzed: !!state.analysis }))
+
+// Set the Claude API key at runtime (playground). Stored in memory only.
+app.post('/key', async (req, reply) => {
+  const { apiKey } = (req.body ?? {}) as { apiKey?: string }
+  if (typeof apiKey !== 'string' || !apiKey.trim()) {
+    return reply.code(400).send({ error: 'apiKey required' })
+  }
+  setKey(apiKey) // never logged
+  app.log.info('API key set via UI')
+  return { ok: true, hasKey: hasKey() }
+})
 
 app.post('/analyze', async (req, reply) => {
   const { path, target } = (req.body ?? {}) as { path?: string; target?: string }

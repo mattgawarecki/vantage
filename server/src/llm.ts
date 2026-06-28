@@ -11,14 +11,29 @@ const MAX_NEIGHBORS = 5
 const MAX_FILE_CHARS = 6000
 
 let client: Anthropic | null = null
+// Runtime key set via the UI (playground). Takes precedence over the env key.
+// In-memory only — never persisted or logged; shared across the server process.
+let runtimeKey: string | null = null
+
+function effectiveKey(): string | undefined {
+  return runtimeKey ?? process.env.ANTHROPIC_API_KEY
+}
+
 function getClient(): Anthropic | null {
-  if (!process.env.ANTHROPIC_API_KEY) return null
-  if (!client) client = new Anthropic()
+  const key = effectiveKey()
+  if (!key) return null
+  if (!client) client = new Anthropic({ apiKey: key })
   return client
 }
 
+/** Set (or clear) the API key at runtime. Resets the cached client. */
+export function setKey(key: string | null): void {
+  runtimeKey = key && key.trim() ? key.trim() : null
+  client = null
+}
+
 export function hasKey(): boolean {
-  return !!process.env.ANTHROPIC_API_KEY
+  return !!effectiveKey()
 }
 
 function readSlice(repoRoot: string, rel: string): string {

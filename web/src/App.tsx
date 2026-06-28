@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { analyzeRepo, getAnalysis, getFile } from './api'
+import { analyzeRepo, getAnalysis, getFile, getHealth, setApiKey } from './api'
 import { Sidebar } from './components/Sidebar'
 import { CodeView } from './components/CodeView'
 import { AnnotationsPanel } from './components/AnnotationsPanel'
@@ -8,6 +8,7 @@ import { AskPanel } from './components/AskPanel'
 import { SummaryCard } from './components/SummaryCard'
 import { RepoEntry } from './components/RepoEntry'
 import { Logo } from './components/Logo'
+import { KeyModal } from './components/KeyModal'
 
 export default function App() {
   const queryClient = useQueryClient()
@@ -17,8 +18,16 @@ export default function App() {
   const [reveal, setReveal] = useState<{ line: number; n: number } | null>(null)
   const [showSummary, setShowSummary] = useState(true)
   const [showEntry, setShowEntry] = useState(false)
+  const [showKey, setShowKey] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [panelOpen, setPanelOpen] = useState(true)
+
+  const healthQ = useQuery({ queryKey: ['health'], queryFn: getHealth })
+  const hasKey = healthQ.data?.hasKey ?? false
+  const keyMut = useMutation({
+    mutationFn: setApiKey,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['health'] }),
+  })
 
   const analysis = analysisQ.data?.data ?? undefined
   const status = analysisQ.data?.status
@@ -86,6 +95,13 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {showKey && (
+        <KeyModal
+          hasKey={hasKey}
+          onSave={(k) => keyMut.mutateAsync(k)}
+          onClose={() => setShowKey(false)}
+        />
+      )}
       {showSummary && (
         <SummaryCard
           summary={analysis.summary}
@@ -104,6 +120,9 @@ export default function App() {
           {live ? 'live' : 'sample'}
         </span>
         <div className="topbar-actions">
+          <button onClick={() => setShowKey(true)} title={hasKey ? 'API key set' : 'No API key — Explain/Ask disabled'}>
+            {hasKey ? '🔑' : '🔓'} Key
+          </button>
           <button onClick={() => setShowEntry(true)}>Change repo</button>
           <button onClick={() => setShowSummary(true)}>Trailhead</button>
           <button onClick={() => setSidebarOpen((v) => !v)}>

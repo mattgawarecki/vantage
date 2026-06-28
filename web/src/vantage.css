@@ -436,6 +436,20 @@ body { background: var(--bg); color: var(--ink); }
 .summary-warn { color: var(--trail-hi); font-size: 0.78rem; margin-top: 12px; }
 .btn-enter { margin-top: 18px; width: 100%; padding: 9px; font-size: 0.9rem; }
 
+/* ---- API key modal ---- */
+.key-card {
+  width: min(460px, 92vw);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 22px;
+}
+.key-card h2 { margin: 0 0 6px; font-size: 1.15rem; }
+.key-status { color: var(--ink-dim); font-size: 0.82rem; margin: 0 0 12px; }
+.key-card .entry-input { margin-top: 0; }
+.key-note { font-size: 0.72rem; color: var(--ink-dim); margin: 8px 0 0; }
+.key-note a { color: var(--water); }
+
 /* ---- repo entry screen ---- */
 .entry {
   height: 100vh;

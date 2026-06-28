@@ -60,6 +60,24 @@ export async function pickFolder(): Promise<string | null> {
   return body.path ?? null
 }
 
+export async function getHealth(): Promise<{ hasKey: boolean; analyzed: boolean }> {
+  const r = await tryFetch<{ hasKey: boolean; analyzed: boolean }>('/health')
+  return r ?? { hasKey: false, analyzed: false }
+}
+
+/** Set the Claude API key on the server (in-memory). Throws on failure. */
+export async function setApiKey(apiKey: string): Promise<void> {
+  const res = await fetch(BASE + '/key', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ apiKey }),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string }
+    throw new Error(body.error ?? `failed to set key (${res.status})`)
+  }
+}
+
 export async function getFile(path: string): Promise<FileContent> {
   const live = await tryFetch<FileContent>(`/file?path=${encodeURIComponent(path)}`)
   if (live) return live
