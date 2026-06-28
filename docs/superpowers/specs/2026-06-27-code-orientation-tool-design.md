@@ -325,6 +325,10 @@ override; interactive force-directed graph view; auth.
   not just an LLM guess. Fits the orienteering brand (a ranger who knows the
   trail). Requires the repo to be a git checkout; pairs naturally with the
   annotations panel and the recency signal.
+- **Semantic feature clustering.** Group files into features by *what they do*
+  (LLM/embedding-based), not just by directory, to power a true "by feature"
+  trail and feature-level orientation. Cut from v1 for time + LLM cost; the
+  Route tab's "By area" uses directory as a proxy in the meantime.
 - **Complexity heat map.** Color-code the file tree and elevation meter by
   interestingness/complexity `score`, so the map reads as a heat map — hot zones
   draw the eye to the gnarly terrain at a glance. Strong metaphor fit (elevation +

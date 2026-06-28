@@ -26,6 +26,21 @@ function topSignalLabel(node: FileNode): string {
   return top ? `${SIGNAL_META[top.kind].glyph} ${SIGNAL_META[top.kind].label}` : ''
 }
 
+interface Difficulty { icon: string; label: string; cls: string; rating: number }
+
+/** Trail difficulty from its stops' interestingness — blend of average + hardest. */
+function difficulty(stops: Stop[]): Difficulty | null {
+  if (stops.length === 0) return null
+  const scores = stops.map((s) => s.node.score)
+  const avg = scores.reduce((a, b) => a + b, 0) / scores.length
+  const max = Math.max(...scores)
+  const rating = 0.6 * avg + 0.4 * max
+  if (rating < 0.35) return { icon: '●', label: 'Easy', cls: 'diff-easy', rating }
+  if (rating < 0.55) return { icon: '■', label: 'Moderate', cls: 'diff-moderate', rating }
+  if (rating < 0.75) return { icon: '◆', label: 'Hard', cls: 'diff-hard', rating }
+  return { icon: '◆◆', label: 'Expert', cls: 'diff-expert', rating }
+}
+
 function buildRoute(analysis: Analysis, strategy: Strategy): Stop[] {
   const entry = analysis.entrypoints[0]
   const markers = analysis.nodes.filter((n) => n.signals.length > 0)
@@ -73,6 +88,7 @@ export function TrailRoute({ analysis, selected, onSelect }: Props) {
   const [strategy, setStrategy] = useState<Strategy>('descent')
   const route = buildRoute(analysis, strategy)
   const blurb = STRATEGIES.find((s) => s.id === strategy)!.blurb
+  const diff = difficulty(route)
 
   return (
     <div className="route">
@@ -87,7 +103,14 @@ export function TrailRoute({ analysis, selected, onSelect }: Props) {
           </button>
         ))}
       </div>
-      <p className="legend">{blurb}</p>
+      <div className="route-meta">
+        <span className="legend">{blurb}</span>
+        {diff && (
+          <span className={`diff-badge ${diff.cls}`} title={`trail rating ${diff.rating.toFixed(2)} (from complexity scores)`}>
+            <span className="diff-icon">{diff.icon}</span> {diff.label}
+          </span>
+        )}
+      </div>
 
       {route.length === 0 ? (
         <p className="hint">No trail to chart — no markers found.</p>

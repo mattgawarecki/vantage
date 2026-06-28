@@ -209,6 +209,21 @@ body { background: var(--bg); color: var(--ink); }
 .feed-marker { font-size: 0.74rem; color: var(--ink-dim); }
 
 /* ---- recommended route ---- */
+.route-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.route-meta .legend { margin: 0; flex: 1; }
+.diff-badge {
+  flex: none;
+  font-size: 0.72rem;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.diff-icon { font-size: 0.85em; letter-spacing: -1px; }
+.diff-easy { color: #6fae6a; }
+.diff-moderate { color: #5aa9c4; }
+.diff-hard { color: #d9e0d6; }
+.diff-expert { color: #e0623c; }
 .route-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
 .route-tab {
   flex: 1;
