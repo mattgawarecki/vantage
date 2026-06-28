@@ -1,7 +1,23 @@
-# Code Orientation Tool — Design
+# Vantage — Code Orientation Tool — Design
 
 **Date:** 2026-06-27
 **Status:** Approved (design); pending implementation plan
+
+## Brand / metaphor
+
+**Project name: Vantage.** The product is framed as **orienteering** through a
+codebase — exploring unfamiliar code is pathfinding on a hike. The metaphor drives
+naming and UI language:
+
+- **Orienteering** — the overall goal: find your bearings in unknown terrain.
+- **Elevation map** — the depth gauge. Depth from the entrypoint reads as
+  elevation/terrain.
+- **Trail markers** — the interesting-code annotations. Signals are markers along
+  the trail worth stopping at.
+
+Use this vocabulary in UI copy and component names where it reads naturally
+(e.g. "elevation" for the depth tab, "trail markers" for annotations). Technical
+identifiers in code/data model stay literal (`depth`, `Signal`) for clarity.
 
 ## Purpose
 
