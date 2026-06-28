@@ -1,18 +1,29 @@
-import type { RepoSummary } from '@vantage/shared'
+import type { FileNode, RepoSummary } from '@vantage/shared'
+import { SIGNAL_META } from '../ui'
+import { Logo } from './Logo'
 
 interface Props {
   summary: RepoSummary
+  nodes: FileNode[]
   repoRoot: string
   live: boolean
   onDismiss: () => void
+  onOpen: (path: string) => void
 }
 
-export function SummaryCard({ summary, repoRoot, live, onDismiss }: Props) {
+const short = (p: string) => p.split('/').slice(-2).join('/')
+
+export function SummaryCard({ summary, nodes, repoRoot, live, onDismiss, onOpen }: Props) {
+  const entries = summary.entrypoints.slice(0, 3)
+  const markers = nodes
+    .filter((n) => n.signals.length > 0 && !summary.entrypoints.includes(n.id))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
   return (
     <div className="summary-overlay" onClick={onDismiss}>
       <div className="summary-card" onClick={(e) => e.stopPropagation()}>
         <header className="summary-head">
-          <h2>🧭 Trailhead</h2>
+          <h2><Logo size={22} /> Trailhead</h2>
           <span className={`badge ${live ? 'live' : 'mock'}`}>
             {live ? 'live analysis' : 'sample data'}
           </span>
@@ -32,6 +43,36 @@ export function SummaryCard({ summary, repoRoot, live, onDismiss }: Props) {
           <Stat label="Top dirs" value={summary.topDirs.join(', ') || '—'}
             hint="Directories holding the most source files — the main regions of the map." />
         </div>
+        <div className="summary-start">
+          <h3>Where to begin</h3>
+          <ul className="start-list">
+            {entries.map((ep) => (
+              <li key={ep}>
+                <button className="start-link" onClick={() => onOpen(ep)} title={ep}>
+                  <span className="start-icon">⛰</span>
+                  <span className="start-name">{short(ep)}</span>
+                  <span className="start-tag">entrypoint</span>
+                </button>
+              </li>
+            ))}
+            {markers.map((m) => {
+              const top = [...m.signals].sort((a, b) => b.severity - a.severity)[0]
+              return (
+                <li key={m.id}>
+                  <button className="start-link" onClick={() => onOpen(m.id)} title={m.id}>
+                    <span className="start-icon">{SIGNAL_META[top.kind].glyph}</span>
+                    <span className="start-name">{short(m.id)}</span>
+                    <span className="start-tag">{SIGNAL_META[top.kind].label}</span>
+                  </button>
+                </li>
+              )
+            })}
+            {entries.length === 0 && markers.length === 0 && (
+              <li className="hint">No standout landmarks — small or flat repo.</li>
+            )}
+          </ul>
+        </div>
+
         {summary.warnings.length > 0 && (
           <p className="summary-warn">⚠ {summary.warnings.length} parse warning(s) skipped</p>
         )}

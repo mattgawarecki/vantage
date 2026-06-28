@@ -7,6 +7,7 @@ import { AnnotationsPanel } from './components/AnnotationsPanel'
 import { AskPanel } from './components/AskPanel'
 import { SummaryCard } from './components/SummaryCard'
 import { RepoEntry } from './components/RepoEntry'
+import { Logo } from './components/Logo'
 
 export default function App() {
   const queryClient = useQueryClient()
@@ -88,14 +89,16 @@ export default function App() {
       {showSummary && (
         <SummaryCard
           summary={analysis.summary}
+          nodes={analysis.nodes}
           repoRoot={analysis.repoRoot}
           live={live}
           onDismiss={() => setShowSummary(false)}
+          onOpen={(p) => { open(p); setShowSummary(false) }}
         />
       )}
 
       <header className="topbar">
-        <span className="brand">🧭 Vantage</span>
+        <span className="brand"><Logo size={20} /> Vantage</span>
         <span className="repo">{analysis.repoRoot}</span>
         <span className={`badge ${live ? 'live' : 'mock'}`}>
           {live ? 'live' : 'sample'}

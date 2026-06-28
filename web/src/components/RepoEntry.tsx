@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { pickFolder } from '../api'
+import { Logo } from './Logo'
 
 interface Props {
   onSubmit: (path: string, target?: string) => Promise<void>
@@ -43,7 +44,7 @@ export function RepoEntry({ onSubmit, onCancel, serverDown }: Props) {
   return (
     <div className="entry">
       <div className="entry-card">
-        <h1 className="entry-title">🧭 Vantage</h1>
+        <h1 className="entry-title"><Logo size={36} /> Vantage</h1>
         <p className="entry-tag">Orienteer an unfamiliar TypeScript / React codebase.</p>
 
         {serverDown && (

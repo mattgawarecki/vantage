@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { FileNode } from '@vantage/shared'
 import { depthLabel, scoreBand } from '../ui'
 
@@ -36,10 +37,7 @@ function DirView({ dir, depth, selected, onSelect }: {
   return (
     <ul className="tree">
       {[...dir.dirs.values()].map((sub) => (
-        <li key={sub.name}>
-          <div className="tree-dir" style={{ paddingLeft: depth * 12 }}>📁 {sub.name}</div>
-          <DirView dir={sub} depth={depth + 1} selected={selected} onSelect={onSelect} />
-        </li>
+        <DirBranch key={sub.name} dir={sub} depth={depth} selected={selected} onSelect={onSelect} />
       ))}
       {dir.files.map((node) => {
         const file = node.id.split('/').pop()
@@ -61,6 +59,26 @@ function DirView({ dir, depth, selected, onSelect }: {
         )
       })}
     </ul>
+  )
+}
+
+function DirBranch({ dir, depth, selected, onSelect }: {
+  dir: TreeDir; depth: number; selected: string | null; onSelect: (p: string) => void
+}) {
+  const [open, setOpen] = useState(true)
+  return (
+    <li>
+      <button
+        className="tree-dir"
+        style={{ paddingLeft: depth * 12 }}
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <span className="tree-caret">{open ? '▾' : '▸'}</span>
+        <span>{open ? '📂' : '📁'} {dir.name}</span>
+      </button>
+      {open && <DirView dir={dir} depth={depth + 1} selected={selected} onSelect={onSelect} />}
+    </li>
   )
 }
 
