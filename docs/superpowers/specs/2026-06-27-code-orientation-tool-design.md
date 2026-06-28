@@ -238,6 +238,17 @@ retrieval for ask (current file + neighbors only); deferred signals
 (`heavily-documented`, `anomaly`); manual entrypoint/context override; interactive
 force-directed graph view; auth.
 
+### Form-factor decision
+
+The *ideal* form factor is likely an **IDE extension** (VS Code) — it would live
+where engineers already read code and reuse the editor's tree, tabs, and gutter.
+We are deliberately **not** building that for v1: extension development adds
+unfamiliar complexity (extension host, webview messaging, packaging) that the
+short time window does not justify. The **web app** delivers the same core
+experience (Monaco gives a near-IDE editor in the browser) with a much simpler
+build. An IDE extension is a candidate future direction; the analyzer/server core
+is form-factor-agnostic and would carry over.
+
 ## Testing
 
 - **analyzer/** — unit tests against small fixture repos: graph correctness,
