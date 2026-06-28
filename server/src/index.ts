@@ -92,8 +92,9 @@ app.post('/explain', async (req, reply) => {
   const cached = explainCache.get(key)
   if (cached) return { text: cached, cached: true }
   try {
-    const text = await explain(state.analysis, path, line)
+    const { text, usage } = await explain(state.analysis, path, line)
     explainCache.set(key, text)
+    app.log.info({ usage }, `explain ${key}`)
     return { text, cached: false }
   } catch (e) {
     return reply.code(e instanceof Error && e.message === 'no-key' ? 503 : 500)
@@ -106,7 +107,8 @@ app.post('/ask', async (req, reply) => {
   const { path, question } = (req.body ?? {}) as { path?: string; question?: string }
   if (!path || !question) return reply.code(400).send({ error: 'path and question required' })
   try {
-    const text = await ask(state.analysis, path, question)
+    const { text, usage } = await ask(state.analysis, path, question)
+    app.log.info({ usage }, `ask ${path}`)
     return { text }
   } catch (e) {
     return reply.code(e instanceof Error && e.message === 'no-key' ? 503 : 500)

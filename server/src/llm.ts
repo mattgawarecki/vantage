@@ -44,45 +44,103 @@ function neighbors(analysis: Analysis, path: string): FileNode[] {
 
 function signalSummary(node: FileNode | undefined): string {
   if (!node || node.signals.length === 0) return '(no notable signals)'
-  return node.signals.map((s) => `- ${s.kind}: ${s.detail}`).join('\n')
+  return node.signals
+    .map((s) => `- ${s.kind}${s.line ? ` (L${s.line})` : ''}: ${s.detail}`)
+    .join('\n')
 }
+
+function dependentsOf(analysis: Analysis, path: string): string[] {
+  return analysis.edges.filter((e) => e.to === path && !e.typeOnly).map((e) => e.from)
+}
+function dependenciesOf(analysis: Analysis, path: string): string[] {
+  return analysis.edges.filter((e) => e.from === path).map((e) => e.to)
+}
+
+/** Numbered code windows around the given 1-based lines (±pad), merged, with gaps marked. */
+function codeWindow(source: string, lines: number[], pad = 6): string {
+  const all = source.split('\n')
+  if (lines.length === 0) {
+    return all.slice(0, 60).map((l, i) => `${String(i + 1).padStart(4)}| ${l}`).join('\n')
+  }
+  const keep = new Set<number>()
+  for (const ln of lines) {
+    for (let i = Math.max(1, ln - pad); i <= Math.min(all.length, ln + pad); i++) keep.add(i)
+  }
+  const sorted = [...keep].sort((a, b) => a - b)
+  const out: string[] = []
+  let prev = 0
+  for (const ln of sorted) {
+    if (prev && ln > prev + 1) out.push('     …')
+    const mark = lines.includes(ln) ? '►' : ' '
+    out.push(`${mark}${String(ln).padStart(4)}| ${all[ln - 1]}`)
+    prev = ln
+  }
+  return out.join('\n')
+}
+
+interface LlmResult { text: string; usage: Anthropic.Messages.Usage }
 
 export async function explain(
   analysis: Analysis,
   path: string,
   line?: number,
-): Promise<string> {
+): Promise<LlmResult> {
   const c = getClient()
   if (!c) throw new Error('no-key')
   const node = analysis.nodes.find((n) => n.id === path)
-  const signal = line ? node?.signals.find((s) => s.line === line) : undefined
-  const source = readSlice(analysis.repoRoot, path)
+  const focused = line ? node?.signals.find((s) => s.line === line) : undefined
+
+  // Lines to spotlight: the focused signal's lines, else every signal line on the file.
+  const focusLines = focused
+    ? focused.lines ?? (focused.line ? [focused.line] : [])
+    : (node?.signals.flatMap((s) => s.lines ?? (s.line ? [s.line] : [])) ?? [])
+
+  const fullSource = readFileSync(join(analysis.repoRoot, path), 'utf8')
+  const deps = dependenciesOf(analysis, path)
+  const dependents = dependentsOf(analysis, path)
+  const depthDesc =
+    node?.depth == null
+      ? 'off-trail (not reachable from an entrypoint)'
+      : node.depth === 0
+        ? 'an entrypoint (summit, depth 0)'
+        : `depth ${node.depth} from the nearest entrypoint`
 
   const system =
-    'You are Vantage, a code-orienteering guide for engineers new to a TypeScript/React codebase. ' +
-    'Explain why a flagged piece of code matters and what it does, in 2-4 sentences. ' +
-    'Be concrete and grounded in the code shown. Final answer only — no preamble.'
+    'You are Vantage, a code-orienteering guide for an engineer getting their bearings in an ' +
+    'unfamiliar TypeScript/React codebase. A static analyzer flagged a "trail marker" — your job is ' +
+    'to orient the newcomer on it. Be specific and grounded in the exact code shown (refer to real ' +
+    'identifiers, not generic advice). Cover, briefly and only where relevant:\n' +
+    '1. What this code actually does.\n' +
+    '2. Why it was flagged / why it is worth a newcomer\'s attention.\n' +
+    '3. How it connects — who depends on it and what it reaches into.\n' +
+    '4. What to read next to understand it.\n' +
+    'Aim for a tight paragraph or a few short bullets. No preamble, no restating the question.'
 
   const user =
-    `File: ${path}\n` +
-    `Why it was flagged:\n${signal ? `- ${signal.kind}: ${signal.detail}` : signalSummary(node)}\n\n` +
-    `Source:\n\`\`\`tsx\n${source}\n\`\`\`\n\n` +
-    (line ? `Focus on line ${line}.` : 'Explain this file as an orientation landmark.')
+    `Repo: ${analysis.summary.framework} at ${analysis.repoRoot}\n` +
+    `File: ${path}  —  ${depthDesc}, interestingness ${node?.score.toFixed(2) ?? '?'}\n\n` +
+    `Flagged${focused ? ` (focus: ${focused.kind})` : ''}:\n` +
+    `${focused ? `- ${focused.kind}${focused.line ? ` (L${focused.line})` : ''}: ${focused.detail}` : ''}\n` +
+    `All signals on this file:\n${signalSummary(node)}\n\n` +
+    `Imported by (${dependents.length}): ${dependents.slice(0, 10).join(', ') || '(nothing internal)'}\n` +
+    `Imports (${deps.length}): ${deps.slice(0, 10).join(', ') || '(no internal deps)'}\n\n` +
+    `Code (► marks flagged lines):\n\`\`\`tsx\n${codeWindow(fullSource, focusLines)}\n\`\`\``
 
   const res = await c.messages.create({
     model: EXPLAIN_MODEL,
-    max_tokens: 1024,
+    max_tokens: 1500,
+    thinking: { type: 'adaptive' },
     system,
     messages: [{ role: 'user', content: user }],
   })
-  return textOf(res)
+  return { text: textOf(res), usage: res.usage }
 }
 
 export async function ask(
   analysis: Analysis,
   path: string,
   question: string,
-): Promise<string> {
+): Promise<LlmResult> {
   const c = getClient()
   if (!c) throw new Error('no-key')
   const node = analysis.nodes.find((n) => n.id === path)
@@ -115,7 +173,7 @@ export async function ask(
     system,
     messages: [{ role: 'user', content: user }],
   })
-  return textOf(res)
+  return { text: textOf(res), usage: res.usage }
 }
 
 function textOf(res: Anthropic.Message): string {
