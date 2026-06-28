@@ -325,6 +325,11 @@ override; interactive force-directed graph view; auth.
   not just an LLM guess. Fits the orienteering brand (a ranger who knows the
   trail). Requires the repo to be a git checkout; pairs naturally with the
   annotations panel and the recency signal.
+- **Hot-path detection.** Identify critical / performance-sensitive code paths
+  (e.g. render loops, request handlers, tight loops, paths reachable from many
+  entrypoints or high-traffic routes) and surface them as a distinct trail-marker
+  kind + a route strategy. Pairs with the depth graph and could use runtime
+  signals (profiles, traces) when available.
 - **Semantic feature clustering.** Group files into features by *what they do*
   (LLM/embedding-based), not just by directory, to power a true "by feature"
   trail and feature-level orientation. Cut from v1 for time + LLM cost; the
