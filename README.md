@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+> Notes for testers:
+>
+> Uses an Anthropic API key. Currently pre-defined in the playground environment with ~$4.75 in token usage available (auto-bill disabled). Uses Sonnet for cost-efficiency.
+>
+> When testing, you should see the app is in playground mode, and there should be two directory trees available to explore: excalidraw-app, and vantage-web. If you see only one much smaller repo with references to an online checkout/cart, refresh the page. This should cause the app to load the correct playground. (I'm not sure what the root issue is here, but I noticed it last-minute.) Please let me know if you encounter any other issues getting the app launched, as this is my first time deploying with Fly.io.
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
