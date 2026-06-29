@@ -3,7 +3,8 @@
 #   fly secrets set ANTHROPIC_API_KEY=sk-...   # spend-capped key
 #   fly deploy
 app = "vantage-playground"
-primary_region = "sea"
+# primary_region omitted — `fly launch` picks the nearest; or set one from
+# `fly platform regions` (e.g. sjc, sea, iad, lhr).
 
 [build]
   dockerfile = "deploy/Dockerfile"
