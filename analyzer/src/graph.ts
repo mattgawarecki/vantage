@@ -2,7 +2,7 @@
 // detect entrypoints, and compute depth via BFS (dynamic edges included).
 import { cruise, type ICruiseOptions } from 'dependency-cruiser'
 import extractTSConfig from 'dependency-cruiser/config-utl/extract-ts-config'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Edge } from '@vantage/shared'
 
@@ -128,47 +128,63 @@ function pkgEntry(repoRoot: string, dir: string, has: (rel: string) => boolean):
   return null
 }
 
+/** Find a single repo's entry within `dir` (relative to repoRoot, '.' for root):
+ *  index.html <script> → src/main|index → bare index.* → package.json main/module. */
+function entryForDir(repoRoot: string, dir: string, has: (rel: string) => boolean): string | null {
+  const indexHtml = join(repoRoot, dir, 'index.html')
+  if (existsSync(indexHtml)) {
+    const m = readFileSync(indexHtml, 'utf8')
+      .match(/<script[^>]+src=["']\.?\/?([^"']+\.(?:t|j)sx?)["']/)
+    if (m) {
+      const rel = join(dir, m[1]).replace(/^\.\//, '')
+      if (has(rel)) return rel
+    }
+  }
+  for (const cand of [
+    'src/main.tsx', 'src/main.ts', 'src/index.tsx', 'src/index.ts',
+    'index.tsx', 'index.ts', 'index.jsx', 'index.js',
+  ]) {
+    const rel = join(dir, cand).replace(/^\.\//, '')
+    if (has(rel)) return rel
+  }
+  return pkgEntry(repoRoot, dir, has)
+}
+
 /**
- * index.html <script> → common src entries → repo package.json → package-local
- * entry (target index / package.json) → orphan roots (preferring index.*).
+ * Root entry → per-subdir entries (multi-repo playground root) → package-local
+ * entry (targeted subdir) → orphan roots (preferring index.*).
  */
 function detectEntrypoints(repoRoot: string, target: string, files: string[], edges: Edge[]): string[] {
   const found = new Set<string>()
   const has = (rel: string) => files.includes(rel)
 
-  // 1. Vite index.html script tag.
-  const indexHtml = join(repoRoot, 'index.html')
-  if (existsSync(indexHtml)) {
-    const html = readFileSync(indexHtml, 'utf8')
-    const m = html.match(/<script[^>]+src=["']\.?\/?([^"']+\.(?:t|j)sx?)["']/)
-    if (m && has(m[1])) found.add(m[1])
-  }
+  // 1. The root itself as a single repo (index.html / src entry / package.json).
+  const rootEntry = entryForDir(repoRoot, '.', has)
+  if (rootEntry) found.add(rootEntry)
 
-  // 2. Common React entry filenames.
-  for (const cand of ['src/main.tsx', 'src/main.ts', 'src/index.tsx', 'src/index.ts']) {
-    if (found.size === 0 && has(cand)) found.add(cand)
-  }
-
-  // 3. Repo-root package.json main/module.
-  if (found.size === 0) {
-    const e = pkgEntry(repoRoot, '.', has)
-    if (e) found.add(e)
-  }
-
-  // 4. Package-local entry when a subdir is targeted (monorepo package / library):
-  //    <target>/index.* and <target>/package.json main/module/exports.
-  if (found.size === 0 && target && target !== '.') {
-    for (const cand of ['index.tsx', 'index.ts', 'index.jsx', 'index.js']) {
-      const rel = join(target, cand).replace(/^\.\//, '')
-      if (found.size === 0 && has(rel)) found.add(rel)
-    }
-    if (found.size === 0) {
-      const e = pkgEntry(repoRoot, target, has)
+  // 2. Multi-repo root: when the root isn't itself a repo, treat each immediate
+  //    subdirectory as its own repo and collect a summit for each (two repos
+  //    bundled under one playground root → two independent trailheads).
+  if (found.size === 0 && (!target || target === '.')) {
+    let subdirs: string[] = []
+    try {
+      subdirs = readdirSync(repoRoot, { withFileTypes: true })
+        .filter((d) => d.isDirectory() && !d.name.startsWith('.') && d.name !== 'node_modules')
+        .map((d) => d.name)
+    } catch { /* unreadable root */ }
+    for (const d of subdirs) {
+      const e = entryForDir(repoRoot, d, has)
       if (e) found.add(e)
     }
   }
 
-  // 5. Fallback: orphan roots (zero internal fan-in, non-trivial fan-out).
+  // 3. Package-local entry when a subdir is targeted (monorepo package / library).
+  if (found.size === 0 && target && target !== '.') {
+    const e = entryForDir(repoRoot, target, has)
+    if (e) found.add(e)
+  }
+
+  // 4. Fallback: orphan roots (zero internal fan-in, non-trivial fan-out).
   //    Prefer index.*-named roots — a flat library exposes many unimported
   //    components, and treating all of them as entrypoints is noise.
   if (found.size === 0) {

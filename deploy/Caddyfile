@@ -1,0 +1,33 @@
+{
+	admin off
+	auto_https off
+}
+
+# One origin: static SPA at / and the Fastify API on the same host.
+# Listens on the host-provided $PORT (Render/Railway inject it; Fly uses 8080).
+:{$PORT:8080} {
+	encode gzip
+
+	# Playground must not be indexed.
+	header X-Robots-Tag "noindex, nofollow"
+
+	@robots path /robots.txt
+	handle @robots {
+		header Content-Type text/plain
+		respond "User-agent: *
+Disallow: /" 200
+	}
+
+	# API surface -> Fastify (fixed internal port, loopback only).
+	@api path /health /analysis /file /explain /ask /key /analyze /pick
+	handle @api {
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	# Everything else -> built SPA, with client-side fallback.
+	handle {
+		root * /app/web/dist
+		try_files {path} /index.html
+		file_server
+	}
+}
